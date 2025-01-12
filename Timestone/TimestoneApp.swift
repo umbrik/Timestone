@@ -10,6 +10,7 @@ import SwiftUI
 @main
 struct TimestoneApp: App {
     @StateObject private var store = ActivityStore()
+    @State private var errorWrapper: ErrorWrapper?
 
     var body: some Scene {
         WindowGroup {
@@ -18,17 +19,22 @@ struct TimestoneApp: App {
                     do {
                         try await store.save(activities: store.activities)
                     } catch {
-                        fatalError(error.localizedDescription)
+                        errorWrapper = ErrorWrapper(error: error, guidance: "Try again later.")
                     }
                 }
             }
-                .task {
-                    do {
-                        try await store.load()
-                    } catch {
-                        fatalError(error.localizedDescription)
-                    }
+            .task {
+                do {
+                    try await store.load()
+                } catch {
+                    errorWrapper = ErrorWrapper(error: error, guidance: "Timestone will load sample data and continue.")
                 }
+            }
+            .sheet(item: $errorWrapper) {
+                store.activities = Activity.sampleData
+            } content: { wrapper in
+                ErrorView(errorWrapper: wrapper)
+            }
         }
     }
 }
